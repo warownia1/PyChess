@@ -1,0 +1,8 @@
+WHITE = 'W'
+BLACK = 'B'
+PAWN = 'o'
+ROOK = 'R'
+KNIGHT = 'N'
+BISHOP = 'B'
+KING = 'K'
+QUEEN = 'Q'

@@ -1,5 +1,5 @@
-WHITE = 'W'
-BLACK = 'B'
+WHITE = 'WHITE'
+BLACK = 'BLACK'
 PAWN = 'o'
 ROOK = 'R'
 KNIGHT = 'N'

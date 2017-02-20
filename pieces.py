@@ -1,14 +1,27 @@
 import itertools
 import math
 
-from exceptions import InvalidFieldError
+from exceptions import InvalidFieldError, IllegalMoveError
 from locals import *
 
 
 class Piece(object):
+    """
+    :type board: board.Board
+    :type x: int
+    :type y: int
+    :type color: str
+    :type type: str
+    """
 
     def __init__(self, board, x, y, color, piece_type):
-        self.captured = False
+        """
+        :param board: board the piece is placed on
+        :param x: initial file where the piece is placed
+        :param y: initial rank there the piece is places
+        :param color: side the piece is on
+        :param piece_type: type of the piece, for fast recognition
+        """
         self.board = board
         self.x = x
         self.y = y
@@ -49,6 +62,37 @@ class Piece(object):
         """
         return self.can_reach(x, y)
 
+    def move_piece(self, to_x, to_y):
+        """
+        Basic piece movement algorithm, picks the piece from the board and
+        places it in a new location.
+        :param to_x: target file
+        :param to_y: target rank
+        """
+        target_field = self.board.get_piece(to_x, to_y)
+        if target_field is None:
+            if self.can_reach(to_x, to_y):
+                self.board.pick_piece(self)
+                self.board.put_piece(self, to_x, to_y)
+            else:
+                raise IllegalMoveError("Can't reach the field")
+        elif target_field.color != self.color:
+            if self.can_attack(to_x, to_y):
+                self.board.remove_piece(target_field)
+                self.board.pick_piece(self)
+                self.board.put_piece(self, to_x, to_y)
+            else:
+                raise IllegalMoveError("Can't attack the field")
+        else:
+            raise IllegalMoveError("Field is occupied")
+
+    @property
+    def opp_color(self):
+        """
+        Returns the color of the pieces of the opponent.
+        """
+        return WHITE if self.color == BLACK else BLACK
+
     def __repr__(self):
         return self.__class__.__name__
 
@@ -61,18 +105,42 @@ class King(Piece):
     def can_reach(self, x, y):
         """
         Checks if the piece moved by one square only. x displacement and y
-        displacement must be no more than 1
+        displacement must be no more than 1.
+        Extra check is performed in case of castling.
+        Checks if the destination field is not attacked by opponent pieces.
         """
         if not super().can_reach(x, y):
             return False
-        return abs(self.x - x) <= 1 and abs(self.y - y) <= 1
+        # long castle must be allowed
+        # displacement vector of the piece is [-2, 0]
+        # none of the fields in between can be attacked
+        if (self.board.long_castle_allowed[self.color] and
+                x - self.x == -2 and y == self.y and
+                self.board.is_field_attacked(
+                    self.opp_color, fields=[(x, y), (x - 1, y), (x - 2, y)]
+                )):
+            rook = self.board.get_piece(1, y)
+            assert rook is not None
+            return rook.can_reach(x - 1, y)
+        return (abs(self.x - x) <= 1 and
+                abs(self.y - y) <= 1 and
+                not self.board.is_field_attacked(self.opp_color, x, y))
 
 
 class LineMovingPiece(Piece):
 
     def find_obstacles(self, x, y):
+        """
+        Finds if any piece is blocking the way to the point (x, y) in a
+        straight line or diagonal.
+        :param x: destination x coordinate (exclusive)
+        :param y: destination y coordinate (exclusive)
+        :return: whether the obstacle was find on the way
+        """
         dx = x - self.x
         dy = y - self.y
+        if dx == 0 and dy == 0:
+            return False
         x_list = (range(self.x, x, int(math.copysign(1, dx)))
                   if dx else itertools.repeat(x))
         y_list = (range(self.y, y, int(math.copysign(1, dy)))
@@ -114,9 +182,8 @@ class Knight(Piece):
         Check if the piece moved two forward and one to the side.
         One coordinate displacement must be 1 while the other must be 2
         """
-        if not super().can_reach(x, y):
-            return False
         return (
+            not super().can_reach(x, y) and
             {abs(self.x - x), abs(self.y - y)} == {1, 2}
         )
 

@@ -1,10 +1,11 @@
 import unittest.mock as mock
 
-from chess import Board
+from board import Board
 from pieces import WHITE, BLACK, King, Queen, Knight, Rook, Bishop, Pawn
 
 mock_board = mock.MagicMock(spec_set=Board)
 mock_board.get_piece.return_value = None
+mock_board.is_field_attacked.return_value = False
 
 
 def test_king_reach():

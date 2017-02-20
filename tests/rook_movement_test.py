@@ -1,7 +1,7 @@
 import unittest.mock as mock
 import pytest
 
-from chess import Board
+from board import Board
 from pieces import WHITE, BLACK, Piece, Rook
 
 

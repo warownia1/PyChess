@@ -116,15 +116,51 @@ class King(Piece):
         # none of the fields in between can be attacked
         if (self.board.long_castle_allowed[self.color] and
                 x - self.x == -2 and y == self.y and
-                self.board.is_field_attacked(
-                    self.opp_color, fields=[(x, y), (x - 1, y), (x - 2, y)]
+                not self.board.is_field_attacked(
+                    self.opp_color, fields=[(x, y), (x + 1, y), (self.x, y)]
                 )):
-            rook = self.board.get_piece(1, y)
-            assert rook is not None
+            rook = self.board.get_piece(0, y)
+            assert isinstance(rook, Rook)
+            return rook.can_reach(x + 1, y)
+        if (self.board.short_castle_allowed[self.color] and
+                x - self.x == 2 and y == self.y and
+                not self.board.is_field_attacked(
+                    self.opp_color, fields=[(x, y), (x - 1, y), (self.x, y)]
+                )):
+            rook = self.board.get_piece(7, y)
+            assert isinstance(rook, Rook)
             return rook.can_reach(x - 1, y)
         return (abs(self.x - x) <= 1 and
                 abs(self.y - y) <= 1 and
                 not self.board.is_field_attacked(self.opp_color, x, y))
+
+    def move_piece(self, to_x, to_y):
+        target_field = self.board.get_piece(to_x, to_y)
+        if target_field is None:
+            if self.can_reach(to_x, to_y):
+                if to_x - self.x == -2:
+                    rook = self.board.get_piece(0, self.y)
+                    self.board.pick_piece(rook)
+                    self.board.put_piece(rook, to_x + 1, to_y)
+                elif to_x - self.x == 2:
+                    rook = self.board.get_piece(7, self.y)
+                    self.board.pick_piece(rook)
+                    self.board.put_piece(rook, to_x - 1, to_y)
+                self.board.pick_piece(self)
+                self.board.put_piece(self, to_x, to_y)
+                self.board.long_castle_allowed[self.color] = False
+                self.board.short_castle_allowed[self.color] = False
+            else:
+                raise IllegalMoveError("Can't reach the field")
+        elif target_field.color != self.color:
+            if self.can_attack(to_x, to_y):
+                self.board.remove_piece(target_field)
+                self.board.pick_piece(self)
+                self.board.put_piece(self, to_x, to_y)
+            else:
+                raise IllegalMoveError("Can't attack the field")
+        else:
+            raise IllegalMoveError("Field is occupied")
 
 
 class LineMovingPiece(Piece):
@@ -194,6 +230,7 @@ class Rook(LineMovingPiece):
 
     def __init__(self, board, x, y, color):
         super().__init__(board, x, y, color, ROOK)
+        self._initial_x = x
 
     def can_reach(self, x, y):
         """
@@ -210,6 +247,13 @@ class Rook(LineMovingPiece):
         else:
             return False
         return True
+
+    def move_piece(self, to_x, to_y):
+        super().move_piece(to_x, to_y)
+        if self._initial_x == 0:
+            self.board.long_castle_allowed[self.color] = False
+        elif self._initial_x == 7:
+            self.board.short_castle_allowed[self.color] = False
 
 
 class Bishop(LineMovingPiece):
@@ -238,7 +282,8 @@ class Pawn(Piece):
 
     def __init__(self, board, x, y, color):
         super().__init__(board, x, y, color, PAWN)
-        self.starting_rank = 2 if self.color == WHITE else 7
+        self._starting_rank = 1 if self.color == WHITE else 6
+        self._forward = 1 if self.color == WHITE else -1
 
     def can_reach(self, x, y):
         """
@@ -249,11 +294,11 @@ class Pawn(Piece):
             return False
         if self.board.get_piece(x, y):
             return False
-        forward = 1 if self.color == WHITE else -1
         if self.x - x == 0:
-            if y == self.y + forward:
+            if y == self.y + self._forward:
                 return True
-            if y == self.y + 2 * forward and self.starting_rank == self.y:
+            if (y == self.y + 2 * self._forward and
+                    self._starting_rank == self.y):
                 return True
         return False
 

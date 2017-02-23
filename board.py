@@ -30,9 +30,9 @@ class BoardManager(object):
         """
         piece = self.board.get_piece(from_x, from_y)
         if piece is None:
-            raise NoPieceError
+            raise NoPieceError("There is no piece here")
         if piece.color != self.player_to_move:
-            raise InvalidPieceError
+            raise InvalidPieceError("You don't own this piece")
         piece.move_piece(to_x, to_y)
         self.switch_player()
 

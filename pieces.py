@@ -141,9 +141,11 @@ class LineMovingPiece(Piece):
         dy = y - self.y
         if dx == 0 and dy == 0:
             return False
-        x_list = (range(self.x, x, int(math.copysign(1, dx)))
+        dir_x = int(math.copysign(1, dx))
+        x_list = (range(self.x + dir_x, x, dir_x)
                   if dx else itertools.repeat(x))
-        y_list = (range(self.y, y, int(math.copysign(1, dy)))
+        dir_y = int(math.copysign(1, dy))
+        y_list = (range(self.y + dir_y, y, dir_y)
                   if dy else itertools.repeat(y))
         for check_x, check_y in zip(x_list, y_list):
             if self.board.get_piece(check_x, check_y):

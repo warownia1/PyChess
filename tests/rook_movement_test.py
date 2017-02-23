@@ -19,7 +19,7 @@ class TestRookMovement:
         mock_piece = mock.MagicMock(spec=Piece, color=WHITE)
 
         def mock_get_piece(x, y):
-            if (x, y) in [(2, 5), (5, 7), (7, 5), (5, 3)]:
+            if (x, y) in [(5, 5), (2, 5), (5, 7), (7, 5), (5, 3)]:
                 return mock_piece
             else:
                 return None

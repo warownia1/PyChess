@@ -64,23 +64,23 @@ class Board(object):
         """
         pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         for x, piece_cls in enumerate(pieces):
-            piece = piece_cls(self, x + 1, 1, WHITE)
+            piece = piece_cls(self, x, 0, WHITE)
             if piece_cls == King:
                 self.white_king = piece
             self.white_pieces.add(piece)
             self.fields[0][x] = piece
 
-            piece = Pawn(self, x + 1, 2, WHITE)
+            piece = Pawn(self, x, 1, WHITE)
             self.fields[1][x] = piece
             self.white_pieces.add(piece)
 
-            piece = piece_cls(self, x + 1, 8, BLACK)
+            piece = piece_cls(self, x, 7, BLACK)
             if piece_cls == King:
                 self.black_king == piece
             self.fields[7][x] = piece
             self.black_pieces.add(piece)
 
-            piece = Pawn(self, x + 1, 7, BLACK)
+            piece = Pawn(self, x, 6, BLACK)
             self.fields[6][x] = piece
             self.black_pieces.add(piece)
 
@@ -92,9 +92,9 @@ class Board(object):
         :return: piece standing on the field
         :rtype: Piece
         """
-        if x <= 0 or x > 8 or y <= 0 or y > 8:
+        if x < 0 or x >= 8 or y < 0 or y >= 8:
             raise InvalidFieldError
-        return self.fields[y - 1][x - 1]
+        return self.fields[y][x]
 
     def pick_piece(self, piece):
         """
@@ -102,7 +102,7 @@ class Board(object):
         :param piece: piece to be picked
         """
         x, y = piece.x, piece.y
-        self.fields[y - 1][x - 1] = None
+        self.fields[y][x] = None
 
     def put_piece(self, piece, x, y):
         """
@@ -112,7 +112,7 @@ class Board(object):
         :param y: rank of the field
         """
         piece.x, piece.y = (x, y)
-        self.fields[y - 1][x - 1] = piece
+        self.fields[y][x] = piece
 
     def remove_piece(self, piece):
         """
@@ -120,11 +120,11 @@ class Board(object):
         :param piece: piece to be removed
         :type piece: Piece
         """
-        piece = self.fields[piece.y - 1][piece.x - 1]
+        piece = self.fields[piece.y][piece.x]
         pieces_set = self.white_pieces \
             if piece.color == WHITE else self.black_pieces
         pieces_set.remove(piece)
-        self.fields[piece.y - 1][piece.x - 1] = None
+        self.fields[piece.y][piece.x] = None
 
     def is_king_in_check(self, color):
         """
@@ -169,10 +169,10 @@ class Board(object):
         """
         Print the board to console output.
         """
-        print('  |  1 2 3 4 5 6 7 8')
+        print('  |  0 1 2 3 4 5 6 7')
         print('--+-----------------')
         for y, rank in zip(range(7, -1, -1), reversed(self.fields)):
-            sys.stdout.write('%i |  ' % (y + 1))
+            sys.stdout.write('%i |  ' % y)
             for x, piece in enumerate(rank):
                 back_color = (colorama.Back.RED
                               if (x + y) % 2 == 0

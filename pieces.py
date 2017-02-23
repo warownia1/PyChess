@@ -39,7 +39,7 @@ class Piece(object):
         :param y: y coordinate on the board
         :return: whether the target position is valid or not
         """
-        if x <= 0 or y <= 0 or x > 8 or y > 8:
+        if x < 0 or y < 0 or x >= 8 or y >= 8:
             # trying to get out of the board
             raise InvalidFieldError(x, y)
         if self.x == x and self.y == y:
@@ -185,7 +185,7 @@ class Knight(Piece):
         One coordinate displacement must be 1 while the other must be 2
         """
         return (
-            not super().can_reach(x, y) and
+            super().can_reach(x, y) and
             {abs(self.x - x), abs(self.y - y)} == {1, 2}
         )
 

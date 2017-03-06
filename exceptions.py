@@ -1,16 +1,20 @@
-class InvalidFieldError(Exception):
+class ChessException(Exception):
     pass
 
 
-class IllegalMoveError(Exception):
+class InvalidFieldError(ChessException):
+    pass
+
+
+class IllegalMoveError(ChessException):
 
     def __init__(self, message):
         self.message = message
 
 
-class NoPieceError(Exception):
+class NoPieceError(ChessException):
     pass
 
 
-class InvalidPieceError(Exception):
+class InvalidPieceError(ChessException):
     pass

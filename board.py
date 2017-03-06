@@ -1,10 +1,10 @@
-import colorama
 import sys
 
-from exceptions import InvalidFieldError, NoPieceError, InvalidPieceError
+import colorama
+
+from exceptions import NoPieceError, InvalidPieceError
 from locals import *
 from pieces import Piece, King, Queen, Knight, Rook, Bishop, Pawn
-
 
 colorama.init(autoreset=True)
 
@@ -33,7 +33,7 @@ class BoardManager(object):
             raise NoPieceError("There is no piece here")
         if piece.color != self.player_to_move:
             raise InvalidPieceError("You don't own this piece")
-        piece.move_piece(to_x, to_y)
+        piece.move(to_x, to_y)
         self.switch_player()
 
     def switch_player(self):
@@ -43,20 +43,8 @@ class BoardManager(object):
 class Board(object):
 
     def __init__(self):
-        self.fields = [[None for _ in range(8)] for _ in range(8)]
-        self.black_pieces = set()
-        self.white_pieces = set()
-        self.white_king = None
-        self.black_king = None
+        self._fields = [[None for _ in range(8)] for _ in range(8)]
         self._fill_starting_board()
-        self.long_castle_allowed = {
-            WHITE: True,
-            BLACK: True
-        }
-        self.short_castle_allowed = {
-            WHITE: True,
-            BLACK: True
-        }
 
     def _fill_starting_board(self):
         """
@@ -65,36 +53,48 @@ class Board(object):
         pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         for x, piece_cls in enumerate(pieces):
             piece = piece_cls(self, x, 0, WHITE)
-            if piece_cls == King:
-                self.white_king = piece
-            self.white_pieces.add(piece)
-            self.fields[0][x] = piece
+            self._fields[0][x] = piece
 
             piece = Pawn(self, x, 1, WHITE)
-            self.fields[1][x] = piece
-            self.white_pieces.add(piece)
+            self._fields[1][x] = piece
 
             piece = piece_cls(self, x, 7, BLACK)
-            if piece_cls == King:
-                self.black_king == piece
-            self.fields[7][x] = piece
-            self.black_pieces.add(piece)
+            self._fields[7][x] = piece
 
             piece = Pawn(self, x, 6, BLACK)
-            self.fields[6][x] = piece
-            self.black_pieces.add(piece)
+            self._fields[6][x] = piece
 
-    def get_piece(self, x, y):
+    def get_pieces(self, color=None):
+        """
+        Returns all the pieces currently placed on the board
+        :param color: color of the pieces to fetch or None for all
+        :return: iterable of all pieces
+        :rtype: collections.Iterable[Piece]
+        """
+        assert color in {None, WHITE, BLACK}
+        flattened_fields = (
+            piece for row in self._fields for piece in row if piece)
+        if color == WHITE:
+            return (p for p in flattened_fields if p.color == WHITE)
+        elif color == BLACK:
+            return (p for p in flattened_fields if p.color == BLACK)
+        else:
+            return flattened_fields
+
+    def get_piece(self, x=None, y=None, fields=None):
         """
         Gets the piece standing on the given field.
         :param x: file of the field
         :param y: rank of the field
+        :param fields: list of fields coordinates
         :return: piece standing on the field
-        :rtype: Piece
+        :rtype: Piece | list[Piece]
         """
-        if x < 0 or x >= 8 or y < 0 or y >= 8:
-            raise InvalidFieldError
-        return self.fields[y][x]
+        assert (x is not None and y is not None) != (fields is not None)
+        if fields is not None:
+            return [self._fields[y][x] for (x, y) in fields]
+        else:
+            return self._fields[y][x]
 
     def pick_piece(self, piece):
         """
@@ -102,7 +102,8 @@ class Board(object):
         :param piece: piece to be picked
         """
         x, y = piece.x, piece.y
-        self.fields[y][x] = None
+        assert self._fields[y][x] == piece, 'This piece is not there'
+        self._fields[y][x] = None
 
     def put_piece(self, piece, x, y):
         """
@@ -112,7 +113,7 @@ class Board(object):
         :param y: rank of the field
         """
         piece.x, piece.y = (x, y)
-        self.fields[y][x] = piece
+        self._fields[y][x] = piece
 
     def remove_piece(self, piece):
         """
@@ -120,50 +121,18 @@ class Board(object):
         :param piece: piece to be removed
         :type piece: Piece
         """
-        piece = self.fields[piece.y][piece.x]
-        pieces_set = self.white_pieces \
-            if piece.color == WHITE else self.black_pieces
-        pieces_set.remove(piece)
-        self.fields[piece.y][piece.x] = None
+        self._fields[piece.y][piece.x] = None
 
-    def is_king_in_check(self, color):
+    def move_piece(self, piece, to_x, to_y):
         """
-        Tells whether the king of the specified color is in check.
-        Checks all opponent's pieces performing check of attack on king's
-        field.
-        :param color: piece color to be checked
-        :return: whether the king is checked
+        Moves the piece on the board using pick_piece and put_piece methods.
+        :param piece: piece to move
+        :param to_x:
+        :param to_y:
+        :return:
         """
-        assert color in {WHITE, BLACK}
-        pieces_color, king = (
-            (BLACK, self.white_king)
-            if color == WHITE
-            else (self.white_pieces, self.black_king)
-        )
-        return self.is_field_attacked(pieces_color, king.x, king.y)
-
-    def is_field_attacked(self, color, x=None, y=None, fields=None):
-        """
-        Tells whether the field is attacked by the pieces of the specified
-        color.
-        :param color: color of pieces to examine
-        :param x: file of the examined field
-        :param y: rank of the examined field
-        :param fields: list of tuple containing coordinates of fields to check
-        :return: whether the field is under attack
-        """
-        assert color in (WHITE, BLACK)
-        assert (x and y) or fields
-        if fields is None:
-            fields = [(x, y)]
-        pieces = (
-            self.white_pieces if color == WHITE else self.black_pieces
-        )
-        for piece in pieces:
-            for x, y in fields:
-                if piece.can_attack(x, y):
-                    return True
-        return False
+        self.pick_piece(piece)
+        self.put_piece(piece, to_x, to_y)
 
     def print(self):
         """
@@ -171,7 +140,7 @@ class Board(object):
         """
         print('  |  0 1 2 3 4 5 6 7')
         print('--+-----------------')
-        for y, rank in zip(range(7, -1, -1), reversed(self.fields)):
+        for y, rank in zip(range(7, -1, -1), reversed(self._fields)):
             sys.stdout.write('%i |  ' % y)
             for x, piece in enumerate(rank):
                 back_color = (colorama.Back.RED

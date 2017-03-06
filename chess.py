@@ -1,10 +1,11 @@
+import itertools
 import sys
 
-import itertools
 import pygame
 from pygame import Rect
 
 from board import BoardManager
+from exceptions import ChessException
 from locals import *
 from panel import Panel
 
@@ -54,7 +55,7 @@ class BoardPanel(Panel):
                               (7 - self._selected_field[1]) * 48,
                               48, 48)
             surface.fill(SELECTED_FIELD_COLOR, field_rect)
-        for piece in bm.board.white_pieces | bm.board.black_pieces:
+        for piece in bm.board.get_pieces():
             pos_x, pos_y = piece.x * 48, (7 - piece.y) * 48
             surface.blit(
                 self._sprites, (pos_x, pos_y),
@@ -69,8 +70,8 @@ class BoardPanel(Panel):
             try:
                 bm.move_piece(self._selected_field[0], self._selected_field[1],
                               clicked_field[0], clicked_field[1])
-            except Exception as e:
-                print(e)
+            except ChessException as e:
+                print(e, file=sys.stderr)
             self._selected_field = None
 
 
